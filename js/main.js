@@ -7,6 +7,8 @@
  * 3. FAQ accordion
  * 4. Scroll-reveal animation
  * 5. Mobile nav: close on anchor link click
+ * 6. Testimonials carousel
+ * 7. Footer year
  */
 
 'use strict';
@@ -253,16 +255,118 @@ const prefersReducedMotion = window.matchMedia(
   methodCards.forEach(function (card, index) {
     card.style.transitionDelay = (index * 0.1) + 's';
   });
+})();
 
-  // Apply stagger delay to testimonials
-  const testimonials = document.querySelectorAll('.testimonial-card[data-reveal]');
-  testimonials.forEach(function (card, index) {
-    card.style.transitionDelay = (index * 0.12) + 's';
+// ============================================================
+// 6. TESTIMONIALS CAROUSEL
+// ============================================================
+(function initCarousel() {
+  const carousel = document.querySelector('.testimonials-carousel');
+  if (!carousel) return;
+
+  const track = carousel.querySelector('.carousel-track');
+  const trackWrap = carousel.querySelector('.carousel-track-wrap');
+  const dotsContainer = carousel.querySelector('.carousel-dots');
+  const prevBtn = carousel.querySelector('.carousel-btn--prev');
+  const nextBtn = carousel.querySelector('.carousel-btn--next');
+  const liveRegion = carousel.querySelector('.carousel-live');
+  const cards = Array.from(track.querySelectorAll('.testimonial-card'));
+
+  if (!cards.length) return;
+
+  let current = 0;
+  let autoTimer = null;
+  const AUTO_DELAY = 5000;
+
+  // Build dots dynamically from card count
+  cards.forEach(function (_, i) {
+    const dot = document.createElement('button');
+    dot.className = 'carousel-dot';
+    dot.setAttribute('role', 'tab');
+    dot.setAttribute('aria-label', 'Testimonial ' + (i + 1));
+    dot.setAttribute('aria-current', i === 0 ? 'true' : 'false');
+    dot.addEventListener('click', function () { goTo(i); restartAuto(); });
+    dotsContainer.appendChild(dot);
   });
 
-  // Apply stagger delay to proof photo cards
-  const photoCards = document.querySelectorAll('.proof-photo-card[data-reveal]');
-  photoCards.forEach(function (card, index) {
-    card.style.transitionDelay = (index * 0.1) + 's';
+  const dots = Array.from(dotsContainer.querySelectorAll('.carousel-dot'));
+
+  function goTo(index) {
+    current = (index + cards.length) % cards.length;
+
+    if (prefersReducedMotion) {
+      track.style.transition = 'none';
+    }
+    track.style.transform = 'translateX(-' + current * 100 + '%)';
+
+    dots.forEach(function (dot, i) {
+      dot.setAttribute('aria-current', i === current ? 'true' : 'false');
+    });
+
+    const author = cards[current].querySelector('cite');
+    if (liveRegion && author) {
+      liveRegion.textContent = 'Showing testimonial from ' + author.textContent;
+    }
+  }
+
+  prevBtn.addEventListener('click', function () { goTo(current - 1); restartAuto(); });
+  nextBtn.addEventListener('click', function () { goTo(current + 1); restartAuto(); });
+
+  carousel.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { goTo(current - 1); restartAuto(); }
+    if (e.key === 'ArrowRight') { goTo(current + 1); restartAuto(); }
   });
+
+  function startAuto() {
+    if (prefersReducedMotion) return;
+    stopAuto();
+    autoTimer = setInterval(function () { goTo(current + 1); }, AUTO_DELAY);
+  }
+
+  function stopAuto() {
+    clearInterval(autoTimer);
+  }
+
+  function restartAuto() {
+    stopAuto();
+    startAuto();
+  }
+
+  carousel.addEventListener('mouseenter', stopAuto);
+  carousel.addEventListener('mouseleave', startAuto);
+  carousel.addEventListener('focusin', stopAuto);
+  carousel.addEventListener('focusout', startAuto);
+
+  // Swipe / drag support
+  let startX = 0;
+  let isDragging = false;
+
+  trackWrap.addEventListener('pointerdown', function (e) {
+    startX = e.clientX;
+    isDragging = true;
+    trackWrap.setPointerCapture(e.pointerId);
+  });
+
+  trackWrap.addEventListener('pointerup', function (e) {
+    if (!isDragging) return;
+    isDragging = false;
+    const delta = e.clientX - startX;
+    if (Math.abs(delta) > 50) {
+      delta < 0 ? goTo(current + 1) : goTo(current - 1);
+      restartAuto();
+    }
+  });
+
+  trackWrap.addEventListener('pointercancel', function () { isDragging = false; });
+
+  startAuto();
+})();
+
+// ============================================================
+// 7. FOOTER YEAR
+// ============================================================
+(function initFooterYear() {
+  const yearEl = document.getElementById('footer-year');
+  if (!yearEl) return;
+  yearEl.textContent = new Date().getFullYear();
 })();

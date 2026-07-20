@@ -2,6 +2,7 @@
 .claude/
 .agents/
 skills-lock.json
+.playwright-mcp/
 
 # macOS
 .DS_Store
